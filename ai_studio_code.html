@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhiloNexus: Созвездие Смыслов</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --node-color: #e2e8f0;
+            --accent-color: #f59e0b; /* Золотистый для "просвещения" */
+            --text-color: #cbd5e1;
+            --panel-bg: rgba(30, 41, 59, 0.95);
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Georgia', serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+        }
+
+        /* --- Canvas Area --- */
+        #universe {
+            flex-grow: 1;
+            position: relative;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+            overflow: hidden;
+            cursor: move;
+        }
+
+        /* SVG Lines Layer */
+        #connections {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        line {
+            stroke: #475569;
+            stroke-width: 2;
+            transition: stroke 0.3s;
+        }
+
+        /* Node Styling */
+        .node {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: #1e293b;
+            border: 2px solid var(--accent-color);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--accent-color);
+            z-index: 2;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+            user-select: none;
+        }
+
+        .node:hover {
+            transform: scale(1.2);
+            background: var(--accent-color);
+            color: #000;
+            box-shadow: 0 0 30px rgba(245, 158, 11, 0.6);
+            z-index: 10;
+        }
+
+        .node.active {
+            background: var(--accent-color);
+            color: #000;
+            box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.3);
+        }
+
+        /* --- Side Panel --- */
+        #info-panel {
+            width: 350px;
+            background: var(--panel-bg);
+            border-left: 1px solid #334155;
+            padding: 20px;
+            box-sizing: border-box;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(10px);
+        }
+
+        #info-panel.open {
+            transform: translateX(0);
+        }
+
+        h2 {
+            color: var(--accent-color);
+            margin-top: 0;
+            border-bottom: 1px solid #475569;
+            padding-bottom: 10px;
+        }
+
+        .description {
+            line-height: 1.6;
+            font-size: 0.95rem;
+            margin-bottom: 20px;
+        }
+
+        .reflection-area {
+            margin-top: auto;
+            border-top: 1px solid #475569;
+            padding-top: 15px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            background: #0f172a;
+            border: 1px solid #475569;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            resize: none;
+            font-family: inherit;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .status-msg {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 5px;
+            text-align: right;
+            height: 1rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.5rem;
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            cursor: pointer;
+        }
+        
+        .close-btn:hover { color: white; }
+
+        /* Background Stars */
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: twinkle 3s infinite ease-in-out;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- SVG Layer for drawing lines -->
+    <div id="universe">
+        <svg id="connections"></svg>
+        <!-- Nodes will be injected here via JS -->
+    </div>
+
+    <!-- Info Panel -->
+    <div id="info-panel">
+        <button class="close-btn" onclick="closePanel()">&times;</button>
+        <h2 id="panel-title">Выберите идею</h2>
+        <div id="panel-desc" class="description">
+            Нажмите на узел карты, чтобы исследовать связи и добавить свои размышления.
+        </div>
+        
+        <div class="reflection-area" id="reflection-section" style="display:none;">
+            <h3>Ваши мысли (9Rome):</h3>
+            <p style="font-size:0.8rem; opacity:0.7">Как это связано с вашей жизнью?</p>
+            <textarea id="user-notes" placeholder="Запишите здесь свои вопросы или инсайты..."></textarea>
+            <div class="status-msg" id="save-status"></div>
+        </div>
+    </div>
+
+<script>
+    // --- Data: The Philosophy Map ---
+    const data = [
+        { 
+            id: 'logic', 
+            label: 'Логика', 
+            x: 50, y: 50, // Center
+            text: 'Искусство правильного мышления. Логика — это не про то, ЧТО мы думаем, а про то, КАК мы связываем утверждения. Это скелет любого аргумента.',
+            related: ['argument', 'reason']
+        },
+        { 
+            id: 'dialogue', 
+            label: 'Диалог', 
+            x: 20, y: 30, 
+            text: 'Диалектика и беседа. Истина рождается не в голове одиночки, а в пространстве между собеседниками. Это метод Сократа.',
+            related: ['ethics', 'logic']
+        },
+        { 
+            id: 'ethics', 
+            label: 'Этика', 
+            x: 80, y: 30, 
+            text: 'Что есть Благо? Этика исследует основания наших поступков. Она связывает абстрактную логику с реальной жизнью.',
+            related: ['dialogue', 'reason']
+        },
+        { 
+            id: 'reason', 
+            label: 'Вера и Разум', 
+            x: 20, y: 70, 
+            text: 'Афины и Иерусалим. Противоречат ли они друг другу или дополняют? Вера дает "зачем", разум дает "как".',
+            related: ['ethics', 'logic']
+        },
+        { 
+            id: 'argument', 
+            label: 'Форма Аргумента', 
+            x: 80, y: 70, 
+            text: 'Структура убеждения. Премиссы и выводы. Умение видеть разницу между валидным аргументом и истинным.',
+            related: ['logic', 'dialogue']
+        }
+    ];
+
+    const universe = document.getElementById('universe');
+    const svg = document.getElementById('connections');
+    const panel = document.getElementById('info-panel');
+    const panelTitle = document.getElementById('panel-title');
+    const panelDesc = document.getElementById('panel-desc');
+    const reflectionSection = document.getElementById('reflection-section');
+    const userNotes = document.getElementById('user-notes');
+    const saveStatus = document.getElementById('save-status');
+
+    let currentNodeId = null;
+
+    // --- Initialization ---
+
+    function init() {
+        // 1. Draw Lines (Relationships)
+        // We need to map IDs to coordinates first
+        const nodeMap = {};
+        data.forEach(node => {
+            nodeMap[node.id] = node;
+        });
+
+        // Create SVG lines
+        data.forEach(node => {
+            if(node.related) {
+                node.related.forEach(targetId => {
+                    const target = nodeMap[targetId];
+                    if (target) {
+                        // Prevent duplicate lines (draw only if id < targetId alphabetically)
+                        if (node.id < targetId) { 
+                            drawLine(node.x, node.y, target.x, target.y);
+                        }
+                    }
+                });
+            }
+        });
+
+        // 2. Create Nodes (HTML Divs)
+        data.forEach(node => {
+            const el = document.createElement('div');
+            el.className = 'node';
+            el.innerText = node.label;
+            el.style.left = node.x + '%';
+            el.style.top = node.y + '%';
+            el.style.transform = 'translate(-50%, -50%)'; // Center pivot
+            
+            el.onclick = () => openNode(node, el);
+            
+            universe.appendChild(el);
+        });
+
+        // 3. Add background stars
+        for(let i=0; i<50; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.width = Math.random() * 3 + 'px';
+            star.style.height = star.style.width;
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            star.style.animationDelay = Math.random() * 5 + 's';
+            universe.appendChild(star);
+        }
+    }
+
+    // --- Functions ---
+
+    function drawLine(x1, y1, x2, y2) {
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', x1 + '%');
+        line.setAttribute('y1', y1 + '%');
+        line.setAttribute('x2', x2 + '%');
+        line.setAttribute('y2', y2 + '%');
+        svg.appendChild(line);
+    }
+
+    function openNode(node, element) {
+        // Highlight active node
+        document.querySelectorAll('.node').forEach(n => n.classList.remove('active'));
+        element.classList.add('active');
+
+        // Update Content
+        currentNodeId = node.id;
+        panelTitle.innerText = node.label;
+        panelDesc.innerHTML = `<p>${node.text}</p><p><em>Связано с: ${node.related.map(r => data.find(d=>d.id===r).label).join(', ')}</em></p>`;
+        
+        reflectionSection.style.display = 'block';
+        panel.classList.add('open');
+
+        // Load Notes from LocalStorage
+        const savedNote = localStorage.getItem(`philo_note_${node.id}`);
+        userNotes.value = savedNote ? savedNote : '';
+        saveStatus.innerText = '';
+    }
+
+    function closePanel() {
+        panel.classList.remove('open');
+        document.querySelectorAll('.node').forEach(n => n.classList.remove('active'));
+    }
+
+    // Auto-save logic
+    userNotes.addEventListener('input', () => {
+        if(currentNodeId) {
+            localStorage.setItem(`philo_note_${currentNodeId}`, userNotes.value);
+            saveStatus.innerText = 'Сохранено...';
+            setTimeout(() => { saveStatus.innerText = ''; }, 2000);
+        }
+    });
+
+    // Close panel if clicked outside nodes
+    universe.addEventListener('click', (e) => {
+        if(e.target === universe || e.target.id === 'connections') {
+            closePanel();
+        }
+    });
+
+    // Run
+    init();
+
+</script>
+</body>
+</html>

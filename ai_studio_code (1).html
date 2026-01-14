@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dialecticus: Арена Смыслов</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --chat-bg: #262626;
+            --text-color: #e0e0e0;
+            --accent-a: #4f46e5; /* Indigo for Player A */
+            --accent-b: #b91c1c; /* Red for Player B */
+            --mentor-bg: #3f3f46;
+            --gold: #f59e0b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Header & Setup --- */
+        header {
+            padding: 15px 30px;
+            background: #000;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 { margin: 0; font-size: 1.2rem; letter-spacing: 1px; color: var(--gold); }
+
+        #setup-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .pair-selector {
+            padding: 15px;
+            font-size: 1.1rem;
+            background: #333;
+            color: white;
+            border: 1px solid var(--gold);
+            border-radius: 5px;
+            margin-bottom: 20px;
+            width: 300px;
+        }
+
+        .start-btn {
+            padding: 10px 40px;
+            font-size: 1.2rem;
+            background: var(--gold);
+            color: black;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        .start-btn:hover { transform: scale(1.05); }
+
+        /* --- Main Arena --- */
+        #arena {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Chat Area */
+        #chat-container {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #333;
+            padding: 20px;
+            overflow-y: auto;
+            background-image: radial-gradient(#333 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .message {
+            max-width: 70%;
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            position: relative;
+            animation: fadeIn 0.4s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .msg-a {
+            align-self: flex-start;
+            background: #312e81; /* Dark Indigo */
+            border-left: 4px solid var(--accent-a);
+            border-top-left-radius: 0;
+        }
+
+        .msg-b {
+            align-self: flex-end;
+            background: #7f1d1d; /* Dark Red */
+            border-right: 4px solid var(--accent-b);
+            border-top-right-radius: 0;
+            text-align: right;
+        }
+
+        .speaker-name {
+            font-size: 0.8rem;
+            font-weight: bold;
+            opacity: 0.7;
+            margin-bottom: 5px;
+            display: block;
+            text-transform: uppercase;
+        }
+
+        .vote-btn {
+            position: absolute;
+            bottom: -15px;
+            background: #262626;
+            border: 1px solid #555;
+            color: #ccc;
+            border-radius: 15px;
+            padding: 2px 10px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .msg-a .vote-btn { left: 0; }
+        .msg-b .vote-btn { right: 0; }
+        .vote-btn:hover { background: var(--gold); color: black; }
+        .vote-btn.voted { border-color: var(--gold); color: var(--gold); }
+
+        /* Input Area */
+        #input-area {
+            background: #262626;
+            padding: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            border-top: 1px solid #444;
+        }
+
+        textarea {
+            flex: 1;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            resize: none;
+            height: 60px;
+            font-family: inherit;
+        }
+        
+        textarea:focus { outline: 1px solid var(--gold); }
+
+        #send-btn {
+            height: 80px;
+            width: 80px;
+            background: #444;
+            border: none;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* --- Mentor Panel (Right Side) --- */
+        #mentor-panel {
+            flex: 1;
+            background: var(--mentor-bg);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            border-left: 1px solid #555;
+            max-width: 300px;
+        }
+
+        .mentor-card {
+            background: #27272a;
+            border: 1px solid #52525b;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .mentor-title {
+            color: var(--gold);
+            font-weight: bold;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .suggestion { font-style: italic; color: #a1a1aa; margin-top: 5px; }
+
+        /* Turn Indicator */
+        .turn-indicator {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Setup Screen -->
+    <div id="setup-screen">
+        <h1 style="font-size: 2.5rem; margin-bottom: 30px;">Dialecticus</h1>
+        <label style="color:#aaa; margin-bottom: 10px;">Выберите исторический спор:</label>
+        <select id="pair-select" class="pair-selector">
+            <option value="Фалес|Аниксимандр">Фалес vs Аниксимандр (Вода или Апейрон?)</option>
+            <option value="Гераклит|Горгий">Гераклит vs Горгий (Логос или Ничто?)</option>
+            <option value="Гераклит|Сократ">Гераклит vs Сократ (Поток или Определения?)</option>
+            <option value="Сократ|Стоик">Сократ vs Стоик (Добродетель как знание?)</option>
+            <option value="Марк Аврелий|Платон">Марк Аврелий vs Платон (Долг или Идеи?)</option>
+            <option value="Платон|Софист">Платон vs Софисты (Истина или Убеждение?)</option>
+            <option value="Платон|Аристотель">Платон vs Аристотель (Мир Идей или Материя?)</option>
+            <option value="Аристотель|Стоик">Аристотель vs Стоик (Счастье или Апатия?)</option>
+            <option value="Аристотель|Эпикуреец">Аристотель vs Эпикуреец (Благо или Удовольствие?)</option>
+            <option value="Аристотель|Фома Аквинский">Аристотель vs Фома Аквинский (Разум и Вера)</option>
+            <option value="Дунс Скот|Фома Аквинский">Дунс Скот vs Фома Аквинский (Воля или Интеллект?)</option>
+        </select>
+        <button class="start-btn" onclick="startDebate()">Начать диспут</button>
+    </div>
+
+    <header>
+        <div id="header-title">Dialecticus</div>
+        <div id="turn-display" class="turn-indicator" style="background:var(--accent-a);">Ход: Игрок А</div>
+        <button onclick="saveDialog()" style="background:transparent; border:1px solid #555; color:white; padding:5px 10px; cursor:pointer;">Сохранить (Local)</button>
+    </header>
+
+    <div id="arena">
+        <div id="chat-container">
+            <!-- Messages go here -->
+            <div style="text-align:center; color: #555; margin-top:20px; font-style:italic;">
+                Диспут начинается. Приветствуйте оппонента и выдвиньте первый тезис.
+            </div>
+        </div>
+
+        <div id="mentor-panel">
+            <div class="mentor-card">
+                <div class="mentor-title">✦ Логический помощник</div>
+                <div id="mentor-text">Ожидание первого аргумента...</div>
+            </div>
+            
+            <div class="mentor-card">
+                <div class="mentor-title">⚠ Проверка на ошибки</div>
+                <div class="suggestion" id="fallacy-check">Следите, чтобы оппонент не атаковал личность, а критиковал аргумент.</div>
+            </div>
+
+            <div class="mentor-card" style="margin-top:auto">
+                <small style="color:#666">Совет: Голосуйте за сильные ходы, нажимая на 🔥</small>
+            </div>
+        </div>
+    </div>
+
+    <div id="input-area">
+        <textarea id="message-input" placeholder="Введите аргумент..."></textarea>
+        <button id="send-btn" onclick="sendMessage()">Ход</button>
+    </div>
+
+<script>
+    // State
+    let playerA = "Позиция А";
+    let playerB = "Позиция B";
+    let currentTurn = 'A'; // 'A' or 'B'
+    let messages = [];
+
+    // Mentor Logic Templates
+    const hints = {
+        general: [
+            "Попробуйте использовать метод 'Reductio ad absurdum' — доведите идею оппонента до абсурда.",
+            "Спросите оппонента о критериях истинности его утверждения.",
+            "Есть ли здесь ложная дилемма? Возможно, есть третий вариант?",
+            "Потребуйте дать четкое определение ключевому термину.",
+            "Как этот аргумент применяется в этической плоскости?",
+            "Это индуктивный вывод (от частного к общему)? Если да, приведите контрпример."
+        ],
+        weakness: [
+            "Атакуйте предпосылку аргумента, а не вывод.",
+            "Задайте вопрос: 'Что является причиной, а что следствием?'",
+            "Укажите на то, что это мнение, а не факт.",
+            "Используйте аналогию, чтобы показать слабость позиции."
+        ]
+    };
+
+    function startDebate() {
+        const rawPair = document.getElementById('pair-select').value;
+        const names = rawPair.split('|');
+        playerA = names[0];
+        playerB = names[1];
+
+        document.getElementById('header-title').innerText = `${playerA} vs ${playerB}`;
+        updateTurnUI();
+        
+        document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('message-input').focus();
+    }
+
+    function updateTurnUI() {
+        const indicator = document.getElementById('turn-display');
+        const input = document.getElementById('message-input');
+        const btn = document.getElementById('send-btn');
+        
+        if (currentTurn === 'A') {
+            indicator.innerText = `Ход: ${playerA}`;
+            indicator.style.background = 'var(--accent-a)';
+            input.placeholder = `${playerA}, ваш аргумент...`;
+            btn.style.background = 'var(--accent-a)';
+        } else {
+            indicator.innerText = `Ход: ${playerB}`;
+            indicator.style.background = 'var(--accent-b)';
+            input.placeholder = `${playerB}, ваш контраргумент...`;
+            btn.style.background = 'var(--accent-b)';
+        }
+    }
+
+    function sendMessage() {
+        const input = document.getElementById('message-input');
+        const text = input.value.trim();
+        if (!text) return;
+
+        // Add to DOM
+        const chat = document.getElementById('chat-container');
+        const msgDiv = document.createElement('div');
+        const isA = currentTurn === 'A';
+        
+        msgDiv.className = `message ${isA ? 'msg-a' : 'msg-b'}`;
+        msgDiv.innerHTML = `
+            <span class="speaker-name">${isA ? playerA : playerB}</span>
+            ${text}
+            <button class="vote-btn" onclick="toggleVote(this)">🔥 0</button>
+        `;
+        
+        chat.appendChild(msgDiv);
+        chat.scrollTop = chat.scrollHeight;
+
+        // Logic processing
+        generateMentorHint(text);
+        
+        // Save to memory
+        messages.push({ speaker: isA ? playerA : playerB, text: text });
+        
+        // Switch turn
+        currentTurn = isA ? 'B' : 'A';
+        input.value = '';
+        updateTurnUI();
+    }
+
+    // The "AI" Logic Assistant
+    function generateMentorHint(lastText) {
+        const mentorText = document.getElementById('mentor-text');
+        const fallacyText = document.getElementById('fallacy-check');
+
+        // Simple keywords check to simulate context awareness
+        const lower = lastText.toLowerCase();
+        
+        let specificHint = "";
+
+        if (lower.includes("потому что") || lower.includes("следовательно")) {
+            specificHint = "Звучит как логический вывод. Проверьте, истинны ли предпосылки (премиссы).";
+        } else if (lower.includes("бог") || lower.includes("боги")) {
+            specificHint = "Вы затронули метафизику. Можно ли это доказать рационально или это вопрос веры?";
+        } else if (lower.includes("всегда") || lower.includes("никогда")) {
+            specificHint = "Осторожнее с абсолютными утверждениями. Достаточно одного 'Черного лебедя', чтобы опровергнуть это.";
+        } else if (lower.length < 20) {
+            specificHint = "Аргумент слишком короток. Разверните мысль, добавьте обоснование.";
+        } else {
+            // Random general hint
+            specificHint = hints.general[Math.floor(Math.random() * hints.general.length)];
+        }
+
+        mentorText.innerText = `Система предлагает: ${specificHint}`;
+        
+        // Random fallacy check
+        const fallacyChecks = [
+            "Не является ли это 'Ad Hominem'? (переход на личности)",
+            "Это не 'Соломенное чучело'? (искажение позиции соперника)",
+            "Нет ли здесь круговой аргументации?",
+            "Апелляция к авторитету? Авторитет может ошибаться."
+        ];
+        fallacyText.innerText = fallacyChecks[Math.floor(Math.random() * fallacyChecks.length)];
+    }
+
+    function toggleVote(btn) {
+        let count = parseInt(btn.innerText.split(' ')[1]);
+        if (btn.classList.contains('voted')) {
+            count--;
+            btn.classList.remove('voted');
+        } else {
+            count++;
+            btn.classList.add('voted');
+        }
+        btn.innerText = `🔥 ${count}`;
+    }
+
+    function saveDialog() {
+        if(messages.length === 0) return alert("Диалог пуст!");
+        const dataStr = JSON.stringify(messages, null, 2);
+        localStorage.setItem('saved_dialogue', dataStr);
+        alert('Диалог сохранен в браузере! (LocalStorage)');
+    }
+
+    // Enter key support
+    document.getElementById('message-input').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+</script>
+</body>
+</html>

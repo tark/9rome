@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chronos & Logos: 9Rome Edition</title>
+    <style>
+        /* --- 1. SETTINGS & TYPOGRAPHY --- */
+        :root {
+            --bg-color: #0f1014;
+            --sidebar-bg: #16181d;
+            --text-primary: #ecf0f1;
+            --text-secondary: #95a5a6;
+            --accent: #d4af37; /* Gold */
+            --accent-dim: rgba(212, 175, 55, 0.2);
+            --card-bg: rgba(30, 35, 40, 0.8);
+            --success: #27ae60;
+            --error: #c0392b;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Georgia', 'Times New Roman', serif; /* Philosophical feel */
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden; /* App-like structure */
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1, h2, h3 { font-weight: normal; margin: 0; }
+        p { font-family: 'Helvetica Neue', sans-serif; line-height: 1.6; }
+
+        /* --- 2. HEADER --- */
+        header {
+            height: 60px;
+            background: #000;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            z-index: 100;
+            flex-shrink: 0;
+        }
+
+        .brand {
+            font-size: 1.2rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        select#topic-selector {
+            background: #222;
+            color: white;
+            border: 1px solid #444;
+            padding: 8px 15px;
+            border-radius: 4px;
+            font-size: 0.95rem;
+            outline: none;
+            width: 300px;
+            transition: border-color 0.3s;
+        }
+        select#topic-selector:focus { border-color: var(--accent); }
+
+        /* --- 3. LAYOUT CONTAINER --- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- 4. SIDEBAR (TIMELINE) --- */
+        .timeline-sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid #333;
+            overflow-y: auto;
+            padding: 40px 20px;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        /* The Vertical Line */
+        .timeline-sidebar::before {
+            content: '';
+            position: absolute;
+            left: 30px;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: #444;
+        }
+
+        .timeline-node {
+            position: relative;
+            padding-left: 40px;
+            margin-bottom: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 0.5;
+        }
+
+        .timeline-node:hover { opacity: 0.8; }
+        
+        .timeline-node.active {
+            opacity: 1;
+            transform: translateX(5px);
+        }
+
+        .node-dot {
+            position: absolute;
+            left: 26px; /* Align with line */
+            top: 5px;
+            width: 9px;
+            height: 9px;
+            background: var(--bg-color);
+            border: 2px solid #666;
+            border-radius: 50%;
+            transition: all 0.3s;
+            z-index: 2;
+        }
+
+        .timeline-node.active .node-dot {
+            background: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+            transform: scale(1.3);
+        }
+
+        .node-title {
+            font-size: 1rem;
+            font-weight: bold;
+            display: block;
+            color: var(--accent);
+        }
+
+        .node-era {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* --- 5. CONTENT AREA --- */
+        .content-scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+            padding: 0 40px 100px 40px; /* Bottom padding for scroll space */
+            background: radial-gradient(circle at 80% 20%, #2c3e50 0%, #0f1014 60%);
+        }
+
+        .intro-placeholder {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: #555;
+        }
+
+        /* SECTION STYLING */
+        section.idea-section {
+            min-height: 90vh; /* Each section takes full screen */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 0;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            animation: fadeIn 0.8s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card-header {
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card-header h2 { font-size: 2rem; margin-bottom: 5px; color: var(--text-primary); }
+        .card-header .meta { color: var(--accent); font-size: 0.9rem; font-family: sans-serif; text-transform: uppercase; }
+
+        .concept-block {
+            margin-bottom: 30px;
+        }
+        .concept-title { color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase; margin-bottom: 10px; }
+        
+        .life-context {
+            background: rgba(212, 175, 55, 0.1); /* Gold tint */
+            border-left: 3px solid var(--accent);
+            padding: 15px;
+            font-style: italic;
+            margin: 20px 0;
+            color: #f1c40f;
+        }
+
+        /* --- 6. INTERACTIVE WIDGETS --- */
+        .widget-area {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        textarea.student-notes {
+            width: 100%;
+            background: #111;
+            border: 1px solid #444;
+            color: #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            min-height: 100px;
+            font-family: 'Helvetica Neue', sans-serif;
+            resize: vertical;
+            box-sizing: border-box; /* Fix padding issue */
+        }
+        textarea.student-notes:focus { outline: 1px solid var(--accent); }
+
+        .audio-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        button.btn {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        button.btn:hover { background: #444; }
+
+        button.btn-rec { background: #c0392b; }
+        button.btn-rec:hover { background: #e74c3c; }
+        button.btn-rec.recording { animation: pulse 1s infinite; background: #e74c3c; }
+
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); } 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); } }
+
+        .save-indicator {
+            font-size: 0.8rem;
+            color: var(--success);
+            opacity: 0;
+            transition: opacity 0.5s;
+            margin-left: auto;
+        }
+
+        /* --- SCROLLBAR --- */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f1014; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="brand">✦ 9Rome: Chronos & Logos</div>
+    <select id="topic-selector">
+        <option value="" disabled selected>Выберите философский вопрос...</option>
+        <option value="universe">1. Как и почему возникла Вселенная?</option>
+        <option value="god">2. Существует ли Бог?</option>
+        <option value="truth">3. Что такое истина?</option>
+        <option value="spirit_matter">4. Что первично: дух или материя?</option>
+        <option value="free_will">5. Свобода воли</option>
+        <option value="good_evil">6. Добро и зло (Этика)</option>
+        <option value="state">7. Идеальное государство</option>
+        <option value="consciousness">8. Сознание и тело</option>
+        <option value="happiness">9. Природа счастья</option>
+        <option value="knowledge">10. Пределы познания</option>
+    </select>
+</header>
+
+<div class="main-container">
+    <!-- Sidebar Navigation -->
+    <div class="timeline-sidebar" id="sidebar">
+        <!-- Nodes injected via JS -->
+    </div>
+
+    <!-- Content Area -->
+    <div class="content-scroll-area" id="content-area">
+        <div class="intro-placeholder">
+            <h2>Добро пожаловать в историю идей.</h2>
+            <p>Выберите вопрос сверху, чтобы развернуть временную линию.</p>
+            <p style="font-size: 3rem; margin-top:20px; opacity:0.2;">⏳</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* --- 1. DATA REPOSITORY --- */
+    // Здесь хранятся структуры для всех 10 тем.
+    // Для краткости кода я детально расписал 3 темы, остальные имеют шаблонную структуру, 
+    // которую вы можете заполнить реальным контентом курса 9Rome.
+
+    const database = {
+        universe: {
+            title: "Происхождение Вселенной",
+            stages: [
+                { id: "u1", figure: "Фалес и Натурфилософы", era: "VI в. до н.э.", desc: "Архэ. Поиск первовещества (вода, воздух, огонь). Отказ от мифа в пользу наблюдения.", context: "Первые попытки объяснить природу из самой природы, без богов.", question: "Можно ли свести сложность мира к одному элементу?" },
+                { id: "u2", figure: "Платон (Тимей)", era: "IV в. до н.э.", desc: "Демиург творит космос из хаоса, глядя на вечные Идеи. Материя сопротивляется.", context: "Космос — это живой организм, наделенный душой.", question: "Является ли красота мира случайностью или замыслом?" },
+                { id: "u3", figure: "Христианская космология", era: "Средние века", desc: "Creatio ex nihilo. Бог творит мир из Ничего актом воли. Время линейно, а не циклично.", context: "Мир не вечен, у него есть Начало и будет Конец.", question: "Что было до начала времени?" },
+                { id: "u4", figure: "Большой Взрыв", era: "XX век", desc: "Сингулярность. Расширяющаяся Вселенная. Физика объясняет 'как', но молчит о 'почему'.", context: "Наука берет на себя роль описания генезиса.", question: "Может ли «ничто» породить «нечто» без внешней причины?" },
+                { id: "u5", figure: "9Rome: Синтез", era: "Здесь и сейчас", desc: "Вселенная как школа духа. Мы — способ космоса познать самого себя.", context: "Ваше личное понимание.", question: "Чувствуете ли вы себя частью вселенского процесса?" }
+            ]
+        },
+        god: {
+            title: "Существует ли Бог?",
+            stages: [
+                { id: "g1", figure: "Ксенофан", era: "500 до н.э.", desc: "Критика антропоморфизма. «Если бы быки рисовали богов, они были бы похожи на быков». Единый Бог — это Ум.", context: "Очищение идеи божественного от человеческих черт.", question: "Мы создаем Бога по своему образу или Он нас?" },
+                { id: "g2", figure: "Аристотель", era: "350 до н.э.", desc: "Перводвигатель. Бог — это чистая энергия и мышление, которое мыслит само себя. Он не заботится о мире, но движет им как объект любви.", context: "Логическая необходимость причины движения.", question: "Нужен ли миру Бог, который не слышит молитв?" },
+                { id: "g3", figure: "Фома Аквинский", era: "1265 г.", desc: "Пять путей. От движения, от причины, от необходимости, от совершенства, от целеполагания.", context: "Гармония веры (откровения) и разума (Аристотеля).", question: "Какое доказательство кажется вам самым сильным?" },
+                { id: "g4", figure: "Ницше и Смерть Бога", era: "XIX век", desc: "«Бог мертв». Мы убили его, разрушив старые ценности. Теперь человек должен сам стать творцом смысла.", context: "Кризис религии в индустриальном обществе.", question: "Возможна ли объективная мораль без высшего наблюдателя?" },
+                { id: "g5", figure: "9Rome: Личная Встреча", era: "Здесь и сейчас", desc: "Бог не как объект доказательства, а как опыт. Диалог с Абсолютом.", context: "Интеграция философии и духовного опыта.", question: "Кто для вас Бог: Закон, Личность или Пустота?" }
+            ]
+        },
+        happiness: {
+            title: "Природа Счастья",
+            stages: [
+                { id: "h1", figure: "Сократ", era: "Афины", desc: "Счастье невозможно без добродетели. Никто не делает зла добровольно, только по неведению.", context: "Счастье души важнее здоровья тела.", question: "Лучше терпеть несправедливость или совершать её?" },
+                { id: "h2", figure: "Стоики", era: "Рим", desc: "Счастье — это спокойствие и принятие судьбы. То, что не в нашей власти, не должно нас тревожить.", context: "Жизнь полна страданий, выход — во внутренней крепости.", question: "Может ли счастливый человек быть рабом или в тюрьме?" },
+                { id: "h3", figure: "Общество потребления", era: "XXI век", desc: "Гедонизм. Счастье = удовольствие + успех + комфорт.", context: "Культ вечной молодости и позитива.", question: "Почему депрессия растет по мере роста комфорта?" },
+                { id: "h4", figure: "9Rome: Целостность", era: "Сейчас", desc: "Счастье как резонанс. Когда мысли, чувства и действия едины.", context: "Работа над собой.", question: "Когда вы в последний раз чувствовали подлинное счастье?" }
+            ]
+        },
+        // Шаблонные заглушки для остальных тем, чтобы код работал
+        truth: { title: "Что такое истина?", stages: getGenericStages("Истина") },
+        spirit_matter: { title: "Дух и Материя", stages: getGenericStages("Дух/Материя") },
+        free_will: { title: "Свобода Воли", stages: getGenericStages("Воля") },
+        good_evil: { title: "Добро и Зло", stages: getGenericStages("Этика") },
+        state: { title: "Государство", stages: getGenericStages("Политика") },
+        consciousness: { title: "Сознание", stages: getGenericStages("Сознание") },
+        knowledge: { title: "Границы познания", stages: getGenericStages("Гносеология") }
+    };
+
+    function getGenericStages(topicName) {
+        return [
+            { id: "gen1", figure: "Древние", era: "Античность", desc: `Как ${topicName} понималась на заре цивилизации.`, context: "Мифологическое сознание.", question: "С чего начался этот вопрос?" },
+            { id: "gen2", figure: "Классика", era: "Золотой век", desc: `Системный подход к теме ${topicName}.`, context: "Расцвет философии.", question: "В чем сила классического аргумента?" },
+            { id: "gen3", figure: "Модерн", era: "Новое время", desc: `Научный переворот и критика темы ${topicName}.`, context: "Рационализм и сомнение.", question: "Что изменила наука?" },
+            { id: "gen4", figure: "9Rome", era: "Синтез", desc: "Ваше личное определение и итог курса.", context: "Личный опыт.", question: "Ваш вывод?" }
+        ];
+    }
+
+    /* --- 2. CORE LOGIC --- */
+    
+    const selector = document.getElementById('topic-selector');
+    const sidebar = document.getElementById('sidebar');
+    const contentArea = document.getElementById('content-area');
+    let currentData = null;
+
+    // Observer setup (Highlights sidebar nodes on scroll)
+    const observerOptions = {
+        root: contentArea,
+        threshold: 0.5 // Trigger when 50% of section is visible
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                activateSidebarNode(entry.target.id);
+            }
+        });
+    }, observerOptions);
+
+    selector.addEventListener('change', (e) => {
+        const topicKey = e.target.value;
+        loadTopic(topicKey);
+    });
+
+    function loadTopic(key) {
+        currentData = database[key];
+        
+        // Clear containers
+        sidebar.innerHTML = '';
+        contentArea.innerHTML = '';
+
+        // Generate UI
+        currentData.stages.forEach((stage, index) => {
+            // 1. Sidebar Node
+            const node = document.createElement('div');
+            node.className = 'timeline-node';
+            node.dataset.targetId = `section-${index}`;
+            node.innerHTML = `
+                <div class="node-dot"></div>
+                <span class="node-title">${stage.figure}</span>
+                <span class="node-era">${stage.era}</span>
+            `;
+            node.onclick = () => {
+                document.getElementById(`section-${index}`).scrollIntoView({ behavior: 'smooth' });
+            };
+            sidebar.appendChild(node);
+
+            // 2. Content Section
+            const section = document.createElement('section');
+            section.className = 'idea-section';
+            section.id = `section-${index}`;
+            
+            // Load saved note
+            const savedNote = localStorage.getItem(`9rome_${key}_${index}`) || '';
+
+            section.innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <div class="meta">${stage.era} — ${stage.figure}</div>
+                        <h2>${stage.desc.split('.')[0]}...</h2> 
+                    </div>
+                    
+                    <div class="concept-block">
+                        <div class="concept-title">Основная идея</div>
+                        <p>${stage.desc}</p>
+                    </div>
+
+                    <div class="life-context">
+                        <strong>Исторический контекст:</strong> ${stage.context}
+                    </div>
+
+                    <div class="widget-area">
+                        <div class="concept-title">🏛 Вопрос для размышления (9Rome)</div>
+                        <p style="font-size: 1.1rem; margin-bottom: 15px;">${stage.question}</p>
+                        
+                        <textarea class="student-notes" 
+                            placeholder="Ваши мысли... (автосохранение)"
+                            oninput="saveNote('${key}', ${index}, this)">${savedNote}</textarea>
+                        
+                        <div class="audio-controls">
+                            <button class="btn btn-rec" id="rec-btn-${index}" onclick="toggleRecord(this, ${index})">
+                                <span>🎙</span> <span class="text">Записать ответ</span>
+                            </button>
+                            <div id="audio-player-${index}" style="flex-grow:1;"></div>
+                            <span class="save-indicator" id="save-msg-${index}">Сохранено</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            contentArea.appendChild(section);
+            observer.observe(section);
+        });
+    }
+
+    function activateSidebarNode(sectionId) {
+        const index = sectionId.split('-')[1];
+        // Remove active class from all
+        document.querySelectorAll('.timeline-node').forEach(n => n.classList.remove('active'));
+        // Add to current
+        const nodes = document.querySelectorAll('.timeline-node');
+        if (nodes[index]) nodes[index].classList.add('active');
+    }
+
+    function saveNote(topic, index, textarea) {
+        localStorage.setItem(`9rome_${topic}_${index}`, textarea.value);
+        const ind = document.getElementById(`save-msg-${index}`);
+        ind.style.opacity = 1;
+        setTimeout(() => ind.style.opacity = 0, 1500);
+    }
+
+    /* --- 3. AUDIO LOGIC (Browser API) --- */
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let activeRecIndex = null;
+
+    async function toggleRecord(btn, index) {
+        // If recording is active somewhere else, stop it
+        if (activeRecIndex !== null && activeRecIndex !== index) {
+            alert("Сначала завершите текущую запись.");
+            return;
+        }
+
+        if (btn.classList.contains('recording')) {
+            // STOP
+            mediaRecorder.stop();
+            btn.classList.remove('recording');
+            btn.querySelector('.text').innerText = "Записать ответ";
+            activeRecIndex = null;
+        } else {
+            // START
+            // Check for HTTPS or Localhost (Browser security requirement)
+            if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.href.indexOf('file://') === -1) {
+                alert("Внимание: Браузеры разрешают доступ к микрофону только по HTTPS или на localhost. Если запись не начнется, это ограничение безопасности браузера.");
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                activeRecIndex = index;
+
+                mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+                
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const container = document.getElementById(`audio-player-${index}`);
+                    
+                    // Create Audio Element + Download Link
+                    container.innerHTML = `
+                        <audio controls src="${audioUrl}" style="height:35px; width:100%; vertical-align:middle;"></audio>
+                        <a href="${audioUrl}" download="9rome_audio_${index}.webm" style="color:#aaa; font-size:0.8rem; margin-left:10px;">Скачать</a>
+                    `;
+                };
+
+                mediaRecorder.start();
+                btn.classList.add('recording');
+                btn.querySelector('.text').innerText = "Стоп (Запись идет...)";
+
+            } catch (err) {
+                console.error(err);
+                alert("Ошибка доступа к микрофону: " + err.message);
+            }
+        }
+    }
+
+</script>
+</body>
+</html>
